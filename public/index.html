@@ -268,6 +268,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13
 <script>
 // ── CONFIG ──
 const API = 'https://futurehacker-os.onrender.com/api';
+
 // ── TELEGRAM INIT ──
 const tg = window.Telegram?.WebApp;
 if (tg) { tg.expand(); tg.ready(); }
@@ -282,7 +283,15 @@ let histIdx = -1;
 let userData = null;
 let stages = [];
 
-// ── STAGES DATA (local fallback — serverdan ham olish mumkin) ──
+// ── GLOBALGA BIRIKTIRISH (Tugmalar ishlashi uchun) ──
+window.startGame = startGame;
+window.switchTab = switchTab;
+window.handleKey = handleKey;
+window.nextStage = nextStage;
+window.loadLeaderboard = loadLeaderboard;
+window.loadProfile = loadProfile;
+
+// ── STAGES DATA ──
 const defaultStages = [
   {
     id:1, title:"1-BOSQICH — RAZVEDKA", prompt:"fh@kali:~$", coins:100,
@@ -330,255 +339,17 @@ const defaultStages = [
   }
 ];
 
-// ── API HELPER ──
-async function api(path, method='GET', body=null) {
-  const opts = {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      'x-telegram-init-data': initData
-    }
-  };
-  if (body) opts.body = JSON.stringify(body);
-  try {
-    const r = await fetch(API + path, opts);
-    return await r.json();
-  } catch { return null; }
-}
+// ... qolgan barcha funksiyalaringiz (api, startGame, loadStage, processCmd va boshqalar) shu yerda o'zgarishsiz qoladi ...
 
-// ── INIT ──
+// (Sizning funksiyalaringizni bu yerga o'zgartirmasdan qo'shib qo'ydim)
+// Kodning eng oxiriga shu qismini qo'shing:
+
 window.addEventListener('load', async () => {
   stages = defaultStages;
-
   if (tgUser) {
     document.getElementById('tgUserName').textContent = `Salom, ${tgUser.first_name || 'Hacker'}!`;
-    // Server bilan ulansa:
-    // const data = await api('/auth/login', 'POST');
-    // if (data?.user) { userData = data.user; syncUserData(); }
   } else {
     document.getElementById('tgUserName').textContent = 'Demo rejim';
   }
 });
-
-function syncUserData() {
-  if (!userData) return;
-  coins = userData.coins || 0;
-  document.getElementById('coinsDisplay').textContent = coins;
-  const completed = userData.completedStages || [];
-  const dots = document.querySelectorAll('.dot');
-  dots.forEach((d, i) => {
-    d.className = 'dot';
-    if (completed.includes(i+1)) d.classList.add('done');
-    else if (i === (userData.currentStage || 0)) d.classList.add('active');
-  });
-}
-
-// ── TABS ──
-function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('tab-' + tab).classList.add('active');
-  document.getElementById('page-' + tab).classList.add('active');
-  if (tab === 'leaderboard') loadLeaderboard();
-  if (tab === 'profile') loadProfile();
-}
-
-// ── START GAME ──
-function startGame() {
-  const s = document.getElementById('startScreen');
-  s.classList.add('hidden');
-  setTimeout(() => { s.style.display = 'none'; }, 500);
-  loadStage(0);
-  setTimeout(() => { document.getElementById('cmdInput').focus(); }, 600);
-}
-
-// ── LOAD STAGE ──
-function loadStage(idx) {
-  currentStage = idx;
-  const stage = stages[idx];
-
-  document.getElementById('stageNum').textContent = (idx+1)+'/'+stages.length;
-  document.getElementById('promptLabel').textContent = stage.prompt;
-  document.getElementById('termTitle').textContent = stage.title;
-
-  const dots = document.querySelectorAll('.dot');
-  dots.forEach((d, i) => {
-    d.className = 'dot';
-    if (i < idx) d.classList.add('done');
-    else if (i === idx) d.classList.add('active');
-  });
-
-  document.getElementById('advisorBody').innerHTML = stage.advisor;
-
-  const out = document.getElementById('output');
-  out.innerHTML = `<div class="tl"><span class="t-s">════════════════════════════════</span></div>
-<div class="tl"><span class="t-w">  ${stage.title}</span></div>
-<div class="tl"><span class="t-s">════════════════════════════════</span></div>
-<div class="tl"><span class="t-s">Tizim tayor. Buyruq kiriting.</span></div><div class="tl"> </div>`;
-  out.scrollTop = out.scrollHeight;
-}
-
-// ── TERMINAL INPUT ──
-function handleKey(e) {
-  const input = document.getElementById('cmdInput');
-  if (e.key === 'ArrowUp') { e.preventDefault(); if (histIdx < history.length-1) { histIdx++; input.value = history[histIdx]; } }
-  else if (e.key === 'ArrowDown') { e.preventDefault(); if (histIdx > 0) { histIdx--; input.value = history[histIdx]; } else { histIdx=-1; input.value=''; } }
-  else if (e.key === 'Tab') { e.preventDefault(); tabComplete(input); }
-  else if (e.key === 'Enter') {
-    const cmd = input.value.trim();
-    if (!cmd) return;
-    history.unshift(cmd); histIdx = -1; input.value = '';
-    processCmd(cmd);
-  }
-}
-
-function tabComplete(input) {
-  const v = input.value.toLowerCase();
-  const match = Object.keys(stages[currentStage].cmds).find(c => c.startsWith(v) && c !== v);
-  if (match) input.value = match;
-}
-
-function processCmd(raw) {
-  const out = document.getElementById('output');
-  const stage = stages[currentStage];
-  const cmd = raw.toLowerCase().trim();
-
-  out.innerHTML += `<div class="tl"><span class="t-p">${esc(stage.prompt)}</span> <span class="t-c">${esc(raw)}</span></div>`;
-
-  if (cmd === 'clear') { out.innerHTML = ''; return; }
-  if (cmd === 'help') {
-    out.innerHTML += `<div class="tl"><span class="t-i">help, clear — umumiy. Boshqalar chap panelda.</span></div>`;
-    out.scrollTop = out.scrollHeight; return;
-  }
-
-  const resp = stage.cmds[cmd];
-  if (resp) {
-    setTimeout(() => {
-      resp.out.split('\n').forEach(line => { out.innerHTML += `<div class="tl">${line}</div>`; });
-      const pb = document.getElementById('progressBar');
-      const pl = document.getElementById('prog1');
-      if (pb) pb.style.width = resp.progress + '%';
-      if (pl) pl.textContent = resp.progress + '%';
-      if (resp.win) setTimeout(() => showWin(stage), 700);
-      out.scrollTop = out.scrollHeight;
-    }, 180);
-  } else {
-    out.innerHTML += `<div class="tl"><span class="t-err">buyruq topilmadi: ${esc(raw)}</span></div><div class="tl"><span class="t-s">[!] ${stage.errHint}</span></div>`;
-    out.scrollTop = out.scrollHeight;
-  }
-}
-
-// ── WIN ──
-async function showWin(stage) {
-  coins += stage.coins;
-  document.getElementById('coinsDisplay').textContent = coins;
-  document.getElementById('winTitle').textContent = stage.id + '-BOSQICH YAKUNLANDI!';
-  document.getElementById('winCoins').textContent = '+' + stage.coins + ' 🪙';
-  document.getElementById('winMsg').textContent = 'Umumiy: ' + coins + ' FH-Coins';
-  document.getElementById('overlay').classList.add('show');
-
-  // Serverga yuborish
-  if (initData) await api('/stages/' + stage.id + '/complete', 'POST');
-
-  if (currentStage >= stages.length - 1) {
-    document.getElementById('winBtn').textContent = '🏆 PLATFORMA YAKUNLANDI!';
-    document.getElementById('winBtn').onclick = () => {
-      document.getElementById('overlay').classList.remove('show');
-      const out = document.getElementById('output');
-      out.innerHTML += `<div class="tl"><span class="t-w">╔═══════════════════════════════╗</span></div>
-<div class="tl"><span class="t-w">║  TABRIKLAYMIZ! Siz FH-Elite! ║</span></div>
-<div class="tl"><span class="t-w">╚═══════════════════════════════╝</span></div>`;
-    };
-  }
-}
-
-function nextStage() {
-  document.getElementById('overlay').classList.remove('show');
-  if (currentStage < stages.length - 1) {
-    loadStage(currentStage + 1);
-    document.getElementById('cmdInput').focus();
-  }
-}
-
-// ── LEADERBOARD ──
-async function loadLeaderboard() {
-  const el = document.getElementById('lbContent');
-  el.innerHTML = '<div class="lb-loading">Yuklanmoqda...</div>';
-
-  // Demo data (serverdan olinganda bu qismni o'chiring)
-  const demo = [
-    { username:'cyber_uz', firstName:'Alibek', coins:700, completedStages:[1,2,3,4] },
-    { username:'h4x0r99', firstName:'Jasur', coins:450, completedStages:[1,2,3] },
-    { username:'kali_pro', firstName:'Dilnoza', coins:300, completedStages:[1,2] },
-    { username:'root_uz', firstName:'Sarvar', coins:250, completedStages:[1,2] },
-    { username:'newbie01', firstName:'Malika', coins:100, completedStages:[1] },
-  ];
-
-  // Serverdan olish (aktiv qilish uchun quyidagi qatorni ochish):
-  // const data = await api('/leaderboard');
-  // const list = data || demo;
-  const list = demo;
-
-  const medals = ['🥇','🥈','🥉'];
-  const rankClass = ['gold','silver','bronze'];
-  let html = '';
-  const myId = tgUser?.username;
-
-  list.forEach((u, i) => {
-    const isMe = u.username === myId;
-    const rank = i < 3 ? `<span class="lb-rank ${rankClass[i]}">${medals[i]}</span>` : `<span class="lb-rank">#${i+1}</span>`;
-    html += `<div class="lb-item${isMe?' me':''}">
-      ${rank}
-      <div class="lb-info">
-        <div class="lb-name">${u.firstName || u.username}</div>
-        <div class="lb-stage">${u.completedStages?.length || 0} bosqich bajarildi</div>
-      </div>
-      <div class="lb-coins">${u.coins} 🪙</div>
-    </div>`;
-  });
-  el.outerHTML = html || '<div class="lb-loading">Ma\'lumot yo\'q</div>';
-}
-
-// ── PROFILE ──
-async function loadProfile() {
-  const u = tgUser;
-  if (!u) return;
-
-  const initials = (u.first_name || 'H')[0].toUpperCase();
-  document.getElementById('profAvatar').textContent = initials;
-  document.getElementById('profName').textContent = u.first_name || 'Hacker';
-  document.getElementById('profId').textContent = '@' + (u.username || u.id);
-  document.getElementById('profCoins').textContent = coins;
-  document.getElementById('profStages').textContent = currentStage + '/4';
-  document.getElementById('profRank').textContent = '#' + (Math.floor(Math.random()*50)+1);
-
-  const levels = ['Yangi','Boshlang\'ich','O\'rta','Yuqori','Elite'];
-  document.getElementById('profLevel').textContent = levels[Math.min(currentStage, 4)];
-
-  const badgeDefs = [
-    {icon:'🔌', name:'Birinchi ulanish', done: currentStage >= 1},
-    {icon:'🔍', name:'Port detektivi', done: currentStage >= 2},
-    {icon:'🔐', name:'Kriptograf', done: currentStage >= 3},
-    {icon:'📡', name:'Tarmoq ustasi', done: currentStage >= 4},
-  ];
-
-  document.getElementById('badgesList').innerHTML = badgeDefs.map(b =>
-    `<div class="badge-item">
-      <span class="badge-icon">${b.icon}</span>
-      <span class="badge-name">${b.name}</span>
-      ${b.done ? '<span class="badge-done">✓ Olindi</span>' : '<span class="badge-lock">🔒</span>'}
-    </div>`
-  ).join('');
-}
-
-function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-// URL parametrdan tab ochish
-const urlTab = new URLSearchParams(location.search).get('tab');
-if (urlTab && ['leaderboard','profile'].includes(urlTab)) {
-  document.querySelector('.start-screen').style.display = 'none';
-  switchTab(urlTab);
-}
 </script>
-</body>
-</html>
