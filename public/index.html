@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FutureHacker CTF</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --green:#00ff88;--green-dim:#00cc66;--green-dark:#003322;
+  --cyan:#00e5ff;--yellow:#ffd600;--red:#ff4444;
+  --bg:#060a0f;--bg2:#0d1117;--bg3:#111820;
+  --border:#1a2a1a;--border2:#00ff8833;
+  --text:#c8ffd4;--text-dim:#4a7a5a;
+  --mono:'Share Tech Mono',monospace;--title:'Orbitron',monospace;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+
+/* TABS */
+.tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--border2);flex-shrink:0;}
+.tab{flex:1;padding:10px 4px;text-align:center;font-size:10px;color:var(--text-dim);cursor:pointer;font-family:var(--title);letter-spacing:1px;border-bottom:2px solid transparent;transition:all .2s;}
+.tab.active{color:var(--green);border-bottom-color:var(--green);}
+
+/* PAGES */
+.page{display:none;flex:1;overflow:hidden;flex-direction:column;}
+.page.active{display:flex;}
+
+/* ── HEADER ── */
+.header{background:var(--bg2);border-bottom:1px solid var(--border2);padding:8px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.logo{font-family:var(--title);font-size:13px;font-weight:900;color:var(--green);letter-spacing:3px;}
+.logo span{color:var(--cyan);}
+.hstats{display:flex;gap:14px;align-items:center;}
+.sbadge{font-size:10px;color:var(--text-dim);}
+.sbadge b{color:var(--yellow);font-size:12px;}
+.stage-dots{display:flex;gap:5px;}
+.dot{width:7px;height:7px;border-radius:50%;border:1px solid var(--text-dim);background:transparent;transition:all .3s;}
+.dot.done{background:var(--green);border-color:var(--green);box-shadow:0 0 5px var(--green);}
+.dot.active{background:var(--cyan);border-color:var(--cyan);box-shadow:0 0 5px var(--cyan);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* ── GAME PAGE ── */
+.game-layout{display:flex;flex:1;overflow:hidden;}
+
+/* ADVISOR */
+.advisor{width:200px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border2);display:flex;flex-direction:column;overflow:hidden;}
+.adv-header{padding:10px 12px 8px;border-bottom:1px solid var(--border);font-family:var(--title);font-size:9px;letter-spacing:2px;color:var(--cyan);display:flex;align-items:center;gap:7px;}
+.adv-icon{width:24px;height:24px;border-radius:50%;background:var(--green-dark);border:1px solid var(--green-dim);display:flex;align-items:center;justify-content:center;font-size:12px;}
+.adv-body{padding:10px;flex:1;overflow-y:auto;font-size:11px;}
+.adv-body::-webkit-scrollbar{width:2px;}
+.adv-body::-webkit-scrollbar-thumb{background:var(--green-dim);}
+.mc{background:var(--bg3);border:1px solid var(--border2);border-radius:5px;padding:10px;margin-bottom:8px;}
+.mc-title{font-family:var(--title);font-size:8px;letter-spacing:2px;color:var(--yellow);margin-bottom:7px;}
+.mc-text{color:var(--text);line-height:1.7;}
+.mc-text .key{color:var(--green);font-weight:bold;}
+.mc-text .warn{color:var(--yellow);}
+.cmd-pill{display:inline-block;background:#001a0d;border:1px solid var(--green-dim);border-radius:3px;padding:1px 5px;color:var(--green);font-size:10px;margin:1px 0;}
+.hint-list{list-style:none;margin-top:6px;}
+.hint-list li{padding:4px 0;border-bottom:1px solid var(--border);font-size:10px;color:var(--text-dim);display:flex;gap:5px;}
+.hint-list li:last-child{border-bottom:none;}
+.hint-list li::before{content:"›";color:var(--green-dim);flex-shrink:0;}
+.hint-list li .hl{color:var(--cyan);}
+.prog-wrap{margin-top:8px;}
+.prog-label{font-size:9px;color:var(--text-dim);margin-bottom:4px;display:flex;justify-content:space-between;}
+.prog-bar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--green-dim),var(--cyan));border-radius:2px;transition:width .5s ease;}
+
+/* TERMINAL */
+.term-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.term-topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:5px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.tb-dots{display:flex;gap:4px;}
+.tb-dot{width:9px;height:9px;border-radius:50%;}
+.tb-dot.r{background:#ff5f57;}.tb-dot.y{background:#febc2e;}.tb-dot.g{background:#28c840;}
+.tb-title{font-size:10px;color:var(--text-dim);font-family:var(--title);letter-spacing:1px;}
+.tb-status{margin-left:auto;font-size:9px;color:var(--cyan);display:flex;align-items:center;gap:4px;}
+.sdot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
+.term-out{flex:1;overflow-y:auto;padding:12px 14px;line-height:1.8;scrollbar-width:thin;scrollbar-color:var(--green-dim) transparent;}
+.term-out::-webkit-scrollbar{width:3px;}
+.term-out::-webkit-scrollbar-thumb{background:var(--green-dim);}
+.tl{margin-bottom:1px;}
+.t-p{color:#ff00ff;}.t-c{color:var(--text);}.t-s{color:var(--text-dim);}.t-ok{color:var(--green);}
+.t-err{color:var(--red);}.t-i{color:var(--cyan);}.t-w{color:var(--yellow);}
+.term-in-row{display:flex;align-items:center;padding:8px 14px;border-top:1px solid var(--border);background:var(--bg2);gap:7px;flex-shrink:0;}
+.t-pl{color:#ff00ff;white-space:nowrap;font-size:12px;}
+.t-input{flex:1;background:transparent;border:none;color:var(--green);font-family:var(--mono);font-size:12px;outline:none;caret-color:var(--green);}
+
+/* ── LEADERBOARD PAGE ── */
+.lb-scroll{flex:1;overflow-y:auto;padding:14px;}
+.lb-scroll::-webkit-scrollbar{width:3px;}
+.lb-scroll::-webkit-scrollbar-thumb{background:var(--green-dim);}
+.lb-title{font-family:var(--title);font-size:11px;letter-spacing:2px;color:var(--green);margin-bottom:14px;text-align:center;}
+.lb-item{background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+.lb-item.me{border-color:var(--cyan);}
+.lb-rank{font-family:var(--title);font-size:14px;color:var(--text-dim);width:28px;text-align:center;}
+.lb-rank.gold{color:#ffd700;}.lb-rank.silver{color:#c0c0c0;}.lb-rank.bronze{color:#cd7f32;}
+.lb-info{flex:1;}
+.lb-name{font-size:13px;color:var(--text);}
+.lb-stage{font-size:10px;color:var(--text-dim);}
+.lb-coins{font-family:var(--title);font-size:13px;color:var(--yellow);}
+.lb-loading{text-align:center;color:var(--text-dim);padding:30px;font-size:12px;}
+
+/* ── PROFILE PAGE ── */
+.profile-scroll{flex:1;overflow-y:auto;padding:16px;}
+.profile-scroll::-webkit-scrollbar{width:3px;}
+.profile-scroll::-webkit-scrollbar-thumb{background:var(--green-dim);}
+.prof-card{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:16px;margin-bottom:12px;text-align:center;}
+.prof-avatar{width:60px;height:60px;border-radius:50%;background:var(--green-dark);border:2px solid var(--green);margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:26px;}
+.prof-name{font-family:var(--title);font-size:14px;color:var(--green);letter-spacing:2px;}
+.prof-id{font-size:10px;color:var(--text-dim);margin-top:3px;}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:12px;text-align:center;}
+.stat-val{font-family:var(--title);font-size:18px;color:var(--yellow);margin-bottom:4px;}
+.stat-lbl{font-size:9px;color:var(--text-dim);letter-spacing:1px;}
+.badges-card{background:var(--bg2);border:1px solid var(--border2);border-radius:6px;padding:12px;}
+.badges-title{font-family:var(--title);font-size:9px;letter-spacing:2px;color:var(--cyan);margin-bottom:10px;}
+.badge-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;}
+.badge-item:last-child{border-bottom:none;}
+.badge-icon{font-size:16px;}
+.badge-name{color:var(--text);}
+.badge-done{color:var(--green);margin-left:auto;}
+.badge-lock{color:var(--text-dim);margin-left:auto;}
+
+/* WIN OVERLAY */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99;backdrop-filter:blur(3px);}
+.overlay.show{display:flex;align-items:center;justify-content:center;}
+.win-box{background:var(--bg2);border:1px solid var(--green);border-radius:10px;padding:28px 32px;text-align:center;box-shadow:0 0 40px #00ff8822;animation:pop .35s ease;}
+@keyframes pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+.win-title{font-family:var(--title);font-size:16px;color:var(--green);letter-spacing:3px;margin-bottom:8px;}
+.win-coins{font-size:30px;color:var(--yellow);margin:10px 0;}
+.win-msg{color:var(--text-dim);font-size:11px;margin-bottom:18px;}
+.win-btn{background:var(--green-dark);border:1px solid var(--green);color:var(--green);padding:10px 28px;border-radius:5px;font-family:var(--mono);font-size:12px;cursor:pointer;letter-spacing:2px;transition:all .2s;}
+.win-btn:hover{background:var(--green);color:var(--bg);}
+
+/* START SCREEN */
+.start-screen{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;transition:opacity .5s;}
+.start-screen.hidden{opacity:0;pointer-events:none;}
+.grid-bg{position:absolute;inset:0;background-image:linear-gradient(var(--border2) 1px,transparent 1px),linear-gradient(90deg,var(--border2) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;opacity:.35;}
+.corner{position:absolute;width:28px;height:28px;border-color:var(--green-dim);border-style:solid;opacity:.5;}
+.corner.tl{top:18px;left:18px;border-width:2px 0 0 2px;}
+.corner.tr{top:18px;right:18px;border-width:2px 2px 0 0;}
+.corner.bl{bottom:18px;left:18px;border-width:0 0 2px 2px;}
+.corner.br{bottom:18px;right:18px;border-width:0 2px 2px 0;}
+.s-logo{font-family:var(--title);font-size:26px;font-weight:900;color:var(--green);letter-spacing:5px;text-align:center;text-shadow:0 0 30px #00ff8866;}
+.s-logo span{color:var(--cyan);}
+.s-sub{font-size:10px;color:var(--text-dim);letter-spacing:3px;text-align:center;}
+.s-desc{font-size:11px;color:var(--green-dim);text-align:center;max-width:320px;line-height:1.8;}
+.s-user{font-size:12px;color:var(--cyan);text-align:center;}
+.s-btn{background:transparent;border:1px solid var(--green);color:var(--green);padding:12px 36px;font-family:var(--title);font-size:11px;letter-spacing:4px;cursor:pointer;border-radius:4px;position:relative;overflow:hidden;transition:color .3s;}
+.s-btn::before{content:'';position:absolute;inset:0;background:var(--green);transform:scaleX(0);transform-origin:left;transition:transform .3s ease;z-index:-1;}
+.s-btn:hover{color:var(--bg);}
+.s-btn:hover::before{transform:scaleX(1);}
+</style>
+</head>
+<body>
+
+<!-- START SCREEN -->
+<div class="start-screen" id="startScreen">
+  <div class="grid-bg"></div>
+  <div class="corner tl"></div><div class="corner tr"></div>
+  <div class="corner bl"></div><div class="corner br"></div>
+  <div class="s-logo">FUTURE<span>HACKER</span></div>
+  <div class="s-sub">KIBERXAVFSIZLIK O'QUV PLATFORMASI</div>
+  <div class="s-user" id="tgUserName">Yuklanmoqda...</div>
+  <div class="s-desc">Etik hacking va kiberxavfsizlik asoslarini real terminal muhitida o'rganib, mutaxassis bo'l.</div>
+  <button class="s-btn" onclick="startGame()">MISSIYANI BOSHLASH</button>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">FH<span>.</span></div>
+  <div class="hstats">
+    <div class="sbadge">B: <b id="stageNum">1/4</b></div>
+    <div class="sbadge">🪙 <b id="coinsDisplay">0</b></div>
+    <div class="stage-dots" id="stageDots">
+      <div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('game')" id="tab-game">🖥️ TERMINAL</div>
+  <div class="tab" onclick="switchTab('leaderboard')" id="tab-leaderboard">🏆 REYTING</div>
+  <div class="tab" onclick="switchTab('profile')" id="tab-profile">👤 PROFIL</div>
+</div>
+
+<!-- GAME PAGE -->
+<div class="page active" id="page-game">
+  <div class="game-layout">
+    <div class="advisor">
+      <div class="adv-header">
+        <div class="adv-icon">🤖</div>
+        MASLAHAT
+      </div>
+      <div class="adv-body" id="advisorBody"></div>
+    </div>
+    <div class="term-wrap">
+      <div class="term-topbar">
+        <div class="tb-dots">
+          <div class="tb-dot r"></div><div class="tb-dot y"></div><div class="tb-dot g"></div>
+        </div>
+        <div class="tb-title" id="termTitle">TERMINAL</div>
+        <div class="tb-status"><div class="sdot"></div>XAVFSIZ</div>
+      </div>
+      <div class="term-out" id="output"></div>
+      <div class="term-in-row">
+        <span class="t-pl" id="promptLabel">fh@kali:~$</span>
+        <input class="t-input" type="text" id="cmdInput"
+          placeholder="buyruq..." onkeydown="handleKey(event)"
+          autocomplete="off" autocorrect="off" spellcheck="false" autocapitalize="none"/>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LEADERBOARD PAGE -->
+<div class="page" id="page-leaderboard">
+  <div class="lb-scroll" id="lbScroll">
+    <div class="lb-title">🏆 TOP HACKERLAR</div>
+    <div class="lb-loading" id="lbContent">Yuklanmoqda...</div>
+  </div>
+</div>
+
+<!-- PROFILE PAGE -->
+<div class="page" id="page-profile">
+  <div class="profile-scroll" id="profileScroll">
+    <div class="prof-card">
+      <div class="prof-avatar" id="profAvatar">👤</div>
+      <div class="prof-name" id="profName">—</div>
+      <div class="prof-id" id="profId">@—</div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-val" id="profCoins">0</div>
+        <div class="stat-lbl">FH-COINS</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="profStages">0/4</div>
+        <div class="stat-lbl">BOSQICHLAR</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="profRank">#—</div>
+        <div class="stat-lbl">REYTING</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="profLevel">Yangi</div>
+        <div class="stat-lbl">DARAJA</div>
+      </div>
+    </div>
+    <div class="badges-card">
+      <div class="badges-title">🏅 YUTUQLAR</div>
+      <div id="badgesList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- WIN OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="win-box">
+    <div class="win-title" id="winTitle">BOSQICH YAKUNLANDI!</div>
+    <div class="win-coins" id="winCoins">+100 🪙</div>
+    <div class="win-msg" id="winMsg">Barakalla!</div>
+    <button class="win-btn" id="winBtn" onclick="nextStage()">DAVOM ETISH →</button>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──
+const API = 'https://your-backend.com/api'; // o'z serveringiz URL
+
+// ── TELEGRAM INIT ──
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.expand(); tg.ready(); }
+const tgUser = tg?.initDataUnsafe?.user || null;
+const initData = tg?.initData || '';
+
+// ── STATE ──
+let currentStage = 0;
+let coins = 0;
+let history = [];
+let histIdx = -1;
+let userData = null;
+let stages = [];
+
+// ── STAGES DATA (local fallback — serverdan ham olish mumkin) ──
+const defaultStages = [
+  {
+    id:1, title:"1-BOSQICH — RAZVEDKA", prompt:"fh@kali:~$", coins:100,
+    advisor:`<div class="mc"><div class="mc-title">📋 MISSIYA</div><div class="mc-text">Salom, yosh hacker! <span class="key">yovuzlar.com</span> saytiga kirib yashirin faylni top.<br><br><span class="warn">Ma'lumotlar:</span></div><ul class="hint-list"><li>Login: <span class="hl">admin</span></li><li>Parol: <span class="hl">12345678</span></li></ul></div><div class="mc"><div class="mc-title">⌨️ BUYRUQLAR</div><ul class="hint-list"><li><span class="cmd-pill">connect yovuzlar.com</span></li><li><span class="cmd-pill">login admin 12345678</span></li><li><span class="cmd-pill">ls</span></li><li><span class="cmd-pill">open yashirin_fayllar</span></li><li><span class="cmd-pill">download secret_data.dat</span></li></ul></div><div class="prog-wrap"><div class="prog-label"><span>Jarayon</span><span id="prog1">0%</span></div><div class="prog-bar"><div class="prog-fill" id="progressBar" style="width:0%"></div></div></div>`,
+    errHint:"connect → login → ls → open → download ketma-ketligida bajaring",
+    cmds:{
+      "connect yovuzlar.com":{out:`<span class="t-i">[*] yovuzlar.com ga ulanish...</span>\n<span class="t-s">Ping: 23ms | Port 22 ochiq</span>\n<span class="t-ok">[+] Ulanish muvaffaqiyatli!</span>`,progress:20},
+      "login admin 12345678":{out:`<span class="t-w">[*] Autentifikatsiya...</span>\n<span class="t-ok">[+] KIRISH MUVAFFAQIYATLI!</span>\n<span class="t-s">Buyruqlar: ls, open, download, clear</span>`,progress:40},
+      "ls":{out:`<span class="t-s">drwxr-xr-x  public_html/</span>\n<span class="t-w">drwx------  Yashirin_Fayllar/</span>\n<span class="t-s">-rw-r--r--  README.txt</span>`,progress:60},
+      "open yashirin_fayllar":{out:`<span class="t-i">[*] Yashirin_Fayllar ochilmoqda...</span>\n<span class="t-ok">[+] Ruxsat berildi!</span>\n<span class="t-w">-rwx------  secret_data.dat</span>`,progress:80},
+      "download secret_data.dat":{out:`<span class="t-w">[*] Yuklab olinmoqda...</span>\n<span class="t-s">████████████████████ 100%  2.3 MB</span>\n<span class="t-ok">[+] Muvaffaqiyatli!</span>`,progress:100,win:true}
+    }
+  },
+  {
+    id:2, title:"2-BOSQICH — PORT SKANERLASH", prompt:"fh@kali:~/recon$", coins:150,
+    advisor:`<div class="mc"><div class="mc-title">📋 MISSIYA</div><div class="mc-text"><span class="key">target-corp.net</span> serverining zaif portini toping.</div></div><div class="mc"><div class="mc-title">⌨️ BUYRUQLAR</div><ul class="hint-list"><li><span class="cmd-pill">nmap -sV target-corp.net</span></li><li><span class="cmd-pill">check port 21</span></li><li><span class="cmd-pill">exploit ftp</span></li></ul></div><div class="prog-wrap"><div class="prog-label"><span>Jarayon</span><span id="prog1">0%</span></div><div class="prog-bar"><div class="prog-fill" id="progressBar" style="width:0%"></div></div></div>`,
+    errHint:"nmap → check port 21 → exploit ftp",
+    cmds:{
+      "nmap -sv target-corp.net":{out:`<span class="t-i">[*] Nmap 7.94 — skanerlash...</span>\n<span class="t-w">21/tcp  open  ftp  vsftpd 2.3.4  ← ZAIF!</span>\n<span class="t-s">22/tcp  open  ssh  OpenSSH 8.9</span>\n<span class="t-ok">[+] 4 ta port topildi.</span>`,progress:33},
+      "check port 21":{out:`<span class="t-w">vsftpd 2.3.4 — CVE-2011-2523</span>\n<span class="t-ok">[+] Backdoor zaiflik tasdiqlandi!</span>`,progress:66},
+      "exploit ftp":{out:`<span class="t-w">[*] Exploit ishga tushirilmoqda...</span>\n<span class="t-ok">[+] ROOT ACCESS OLINDI!</span>\n<span class="t-s">uid=0(root) gid=0(root)</span>`,progress:100,win:true}
+    }
+  },
+  {
+    id:3, title:"3-BOSQICH — KRIPTOGRAFIYA", prompt:"fh@kali:~/crypto$", coins:200,
+    advisor:`<div class="mc"><div class="mc-title">📋 MISSIYA</div><div class="mc-text"><span class="key">MD5</span> hash ni crack qilib parolni toping.</div></div><div class="mc"><div class="mc-title">⌨️ BUYRUQLAR</div><ul class="hint-list"><li><span class="cmd-pill">cat hash.txt</span></li><li><span class="cmd-pill">hashid hash.txt</span></li><li><span class="cmd-pill">hashcat -a0 hash.txt</span></li><li><span class="cmd-pill">verify password</span></li></ul></div><div class="prog-wrap"><div class="prog-label"><span>Jarayon</span><span id="prog1">0%</span></div><div class="prog-bar"><div class="prog-fill" id="progressBar" style="width:0%"></div></div></div>`,
+    errHint:"cat → hashid → hashcat → verify password",
+    cmds:{
+      "cat hash.txt":{out:`<span class="t-w">5f4dcc3b5aa765d61d8327deb882cf99</span>\n<span class="t-s">[!] Algoritm turini aniqlang.</span>`,progress:25},
+      "hashid hash.txt":{out:`<span class="t-ok">[+] MD5 (95% ehtimollik)</span>`,progress:50},
+      "hashcat -a0 hash.txt":{out:`<span class="t-w">████████████████████ 100%</span>\n<span class="t-ok">[+] TOPILDI: password</span>`,progress:75},
+      "verify password":{out:`<span class="t-ok">[+] PAROL TASDIQLANDI!</span>\n<span class="t-s">MD5("password") = 5f4dcc3b5aa765d61d8327deb882cf99 ✓</span>`,progress:100,win:true}
+    }
+  },
+  {
+    id:4, title:"4-BOSQICH — TARMOQ TAHLILI", prompt:"fh@kali:~/network$", coins:250,
+    advisor:`<div class="mc"><div class="mc-title">📋 MISSIYA</div><div class="mc-text">Tarmoq trafigini tahlil qilib shubhali hujumni toping.</div></div><div class="mc"><div class="mc-title">⌨️ BUYRUQLAR</div><ul class="hint-list"><li><span class="cmd-pill">ifconfig</span></li><li><span class="cmd-pill">tcpdump -i eth0</span></li><li><span class="cmd-pill">filter http</span></li><li><span class="cmd-pill">analyze packets</span></li></ul></div><div class="prog-wrap"><div class="prog-label"><span>Jarayon</span><span id="prog1">0%</span></div><div class="prog-bar"><div class="prog-fill" id="progressBar" style="width:0%"></div></div></div>`,
+    errHint:"ifconfig → tcpdump -i eth0 → filter http → analyze packets",
+    cmds:{
+      "ifconfig":{out:`<span class="t-ok">eth0: inet 10.0.0.5 netmask 255.255.255.0</span>`,progress:25},
+      "tcpdump -i eth0":{out:`<span class="t-w">10.0.0.99 → GET /admin/config  ← SHUBHALI!</span>`,progress:50},
+      "filter http":{out:`<span class="t-w">Authorization: Basic YWRtaW46cGFzc3dvcmQ=</span>\n<span class="t-s">Decode: admin:password (ochiq matn!)</span>`,progress:75},
+      "analyze packets":{out:`<span class="t-ok">[+] TAHDID ANIQLANDI!</span>\n<span class="t-s">ARP Poisoning + HTTP Sniffing. Hisobot saqlandi.</span>`,progress:100,win:true}
+    }
+  }
+];
+
+// ── API HELPER ──
+async function api(path, method='GET', body=null) {
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-telegram-init-data': initData
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  try {
+    const r = await fetch(API + path, opts);
+    return await r.json();
+  } catch { return null; }
+}
+
+// ── INIT ──
+window.addEventListener('load', async () => {
+  stages = defaultStages;
+
+  if (tgUser) {
+    document.getElementById('tgUserName').textContent = `Salom, ${tgUser.first_name || 'Hacker'}!`;
+    // Server bilan ulansa:
+    // const data = await api('/auth/login', 'POST');
+    // if (data?.user) { userData = data.user; syncUserData(); }
+  } else {
+    document.getElementById('tgUserName').textContent = 'Demo rejim';
+  }
+});
+
+function syncUserData() {
+  if (!userData) return;
+  coins = userData.coins || 0;
+  document.getElementById('coinsDisplay').textContent = coins;
+  const completed = userData.completedStages || [];
+  const dots = document.querySelectorAll('.dot');
+  dots.forEach((d, i) => {
+    d.className = 'dot';
+    if (completed.includes(i+1)) d.classList.add('done');
+    else if (i === (userData.currentStage || 0)) d.classList.add('active');
+  });
+}
+
+// ── TABS ──
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('page-' + tab).classList.add('active');
+  if (tab === 'leaderboard') loadLeaderboard();
+  if (tab === 'profile') loadProfile();
+}
+
+// ── START GAME ──
+function startGame() {
+  const s = document.getElementById('startScreen');
+  s.classList.add('hidden');
+  setTimeout(() => { s.style.display = 'none'; }, 500);
+  loadStage(0);
+  setTimeout(() => { document.getElementById('cmdInput').focus(); }, 600);
+}
+
+// ── LOAD STAGE ──
+function loadStage(idx) {
+  currentStage = idx;
+  const stage = stages[idx];
+
+  document.getElementById('stageNum').textContent = (idx+1)+'/'+stages.length;
+  document.getElementById('promptLabel').textContent = stage.prompt;
+  document.getElementById('termTitle').textContent = stage.title;
+
+  const dots = document.querySelectorAll('.dot');
+  dots.forEach((d, i) => {
+    d.className = 'dot';
+    if (i < idx) d.classList.add('done');
+    else if (i === idx) d.classList.add('active');
+  });
+
+  document.getElementById('advisorBody').innerHTML = stage.advisor;
+
+  const out = document.getElementById('output');
+  out.innerHTML = `<div class="tl"><span class="t-s">════════════════════════════════</span></div>
+<div class="tl"><span class="t-w">  ${stage.title}</span></div>
+<div class="tl"><span class="t-s">════════════════════════════════</span></div>
+<div class="tl"><span class="t-s">Tizim tayor. Buyruq kiriting.</span></div><div class="tl"> </div>`;
+  out.scrollTop = out.scrollHeight;
+}
+
+// ── TERMINAL INPUT ──
+function handleKey(e) {
+  const input = document.getElementById('cmdInput');
+  if (e.key === 'ArrowUp') { e.preventDefault(); if (histIdx < history.length-1) { histIdx++; input.value = history[histIdx]; } }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); if (histIdx > 0) { histIdx--; input.value = history[histIdx]; } else { histIdx=-1; input.value=''; } }
+  else if (e.key === 'Tab') { e.preventDefault(); tabComplete(input); }
+  else if (e.key === 'Enter') {
+    const cmd = input.value.trim();
+    if (!cmd) return;
+    history.unshift(cmd); histIdx = -1; input.value = '';
+    processCmd(cmd);
+  }
+}
+
+function tabComplete(input) {
+  const v = input.value.toLowerCase();
+  const match = Object.keys(stages[currentStage].cmds).find(c => c.startsWith(v) && c !== v);
+  if (match) input.value = match;
+}
+
+function processCmd(raw) {
+  const out = document.getElementById('output');
+  const stage = stages[currentStage];
+  const cmd = raw.toLowerCase().trim();
+
+  out.innerHTML += `<div class="tl"><span class="t-p">${esc(stage.prompt)}</span> <span class="t-c">${esc(raw)}</span></div>`;
+
+  if (cmd === 'clear') { out.innerHTML = ''; return; }
+  if (cmd === 'help') {
+    out.innerHTML += `<div class="tl"><span class="t-i">help, clear — umumiy. Boshqalar chap panelda.</span></div>`;
+    out.scrollTop = out.scrollHeight; return;
+  }
+
+  const resp = stage.cmds[cmd];
+  if (resp) {
+    setTimeout(() => {
+      resp.out.split('\n').forEach(line => { out.innerHTML += `<div class="tl">${line}</div>`; });
+      const pb = document.getElementById('progressBar');
+      const pl = document.getElementById('prog1');
+      if (pb) pb.style.width = resp.progress + '%';
+      if (pl) pl.textContent = resp.progress + '%';
+      if (resp.win) setTimeout(() => showWin(stage), 700);
+      out.scrollTop = out.scrollHeight;
+    }, 180);
+  } else {
+    out.innerHTML += `<div class="tl"><span class="t-err">buyruq topilmadi: ${esc(raw)}</span></div><div class="tl"><span class="t-s">[!] ${stage.errHint}</span></div>`;
+    out.scrollTop = out.scrollHeight;
+  }
+}
+
+// ── WIN ──
+async function showWin(stage) {
+  coins += stage.coins;
+  document.getElementById('coinsDisplay').textContent = coins;
+  document.getElementById('winTitle').textContent = stage.id + '-BOSQICH YAKUNLANDI!';
+  document.getElementById('winCoins').textContent = '+' + stage.coins + ' 🪙';
+  document.getElementById('winMsg').textContent = 'Umumiy: ' + coins + ' FH-Coins';
+  document.getElementById('overlay').classList.add('show');
+
+  // Serverga yuborish
+  if (initData) await api('/stages/' + stage.id + '/complete', 'POST');
+
+  if (currentStage >= stages.length - 1) {
+    document.getElementById('winBtn').textContent = '🏆 PLATFORMA YAKUNLANDI!';
+    document.getElementById('winBtn').onclick = () => {
+      document.getElementById('overlay').classList.remove('show');
+      const out = document.getElementById('output');
+      out.innerHTML += `<div class="tl"><span class="t-w">╔═══════════════════════════════╗</span></div>
+<div class="tl"><span class="t-w">║  TABRIKLAYMIZ! Siz FH-Elite! ║</span></div>
+<div class="tl"><span class="t-w">╚═══════════════════════════════╝</span></div>`;
+    };
+  }
+}
+
+function nextStage() {
+  document.getElementById('overlay').classList.remove('show');
+  if (currentStage < stages.length - 1) {
+    loadStage(currentStage + 1);
+    document.getElementById('cmdInput').focus();
+  }
+}
+
+// ── LEADERBOARD ──
+async function loadLeaderboard() {
+  const el = document.getElementById('lbContent');
+  el.innerHTML = '<div class="lb-loading">Yuklanmoqda...</div>';
+
+  // Demo data (serverdan olinganda bu qismni o'chiring)
+  const demo = [
+    { username:'cyber_uz', firstName:'Alibek', coins:700, completedStages:[1,2,3,4] },
+    { username:'h4x0r99', firstName:'Jasur', coins:450, completedStages:[1,2,3] },
+    { username:'kali_pro', firstName:'Dilnoza', coins:300, completedStages:[1,2] },
+    { username:'root_uz', firstName:'Sarvar', coins:250, completedStages:[1,2] },
+    { username:'newbie01', firstName:'Malika', coins:100, completedStages:[1] },
+  ];
+
+  // Serverdan olish (aktiv qilish uchun quyidagi qatorni ochish):
+  // const data = await api('/leaderboard');
+  // const list = data || demo;
+  const list = demo;
+
+  const medals = ['🥇','🥈','🥉'];
+  const rankClass = ['gold','silver','bronze'];
+  let html = '';
+  const myId = tgUser?.username;
+
+  list.forEach((u, i) => {
+    const isMe = u.username === myId;
+    const rank = i < 3 ? `<span class="lb-rank ${rankClass[i]}">${medals[i]}</span>` : `<span class="lb-rank">#${i+1}</span>`;
+    html += `<div class="lb-item${isMe?' me':''}">
+      ${rank}
+      <div class="lb-info">
+        <div class="lb-name">${u.firstName || u.username}</div>
+        <div class="lb-stage">${u.completedStages?.length || 0} bosqich bajarildi</div>
+      </div>
+      <div class="lb-coins">${u.coins} 🪙</div>
+    </div>`;
+  });
+  el.outerHTML = html || '<div class="lb-loading">Ma\'lumot yo\'q</div>';
+}
+
+// ── PROFILE ──
+async function loadProfile() {
+  const u = tgUser;
+  if (!u) return;
+
+  const initials = (u.first_name || 'H')[0].toUpperCase();
+  document.getElementById('profAvatar').textContent = initials;
+  document.getElementById('profName').textContent = u.first_name || 'Hacker';
+  document.getElementById('profId').textContent = '@' + (u.username || u.id);
+  document.getElementById('profCoins').textContent = coins;
+  document.getElementById('profStages').textContent = currentStage + '/4';
+  document.getElementById('profRank').textContent = '#' + (Math.floor(Math.random()*50)+1);
+
+  const levels = ['Yangi','Boshlang\'ich','O\'rta','Yuqori','Elite'];
+  document.getElementById('profLevel').textContent = levels[Math.min(currentStage, 4)];
+
+  const badgeDefs = [
+    {icon:'🔌', name:'Birinchi ulanish', done: currentStage >= 1},
+    {icon:'🔍', name:'Port detektivi', done: currentStage >= 2},
+    {icon:'🔐', name:'Kriptograf', done: currentStage >= 3},
+    {icon:'📡', name:'Tarmoq ustasi', done: currentStage >= 4},
+  ];
+
+  document.getElementById('badgesList').innerHTML = badgeDefs.map(b =>
+    `<div class="badge-item">
+      <span class="badge-icon">${b.icon}</span>
+      <span class="badge-name">${b.name}</span>
+      ${b.done ? '<span class="badge-done">✓ Olindi</span>' : '<span class="badge-lock">🔒</span>'}
+    </div>`
+  ).join('');
+}
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// URL parametrdan tab ochish
+const urlTab = new URLSearchParams(location.search).get('tab');
+if (urlTab && ['leaderboard','profile'].includes(urlTab)) {
+  document.querySelector('.start-screen').style.display = 'none';
+  switchTab(urlTab);
+}
+</script>
+</body>
+</html>
